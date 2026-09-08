@@ -18,12 +18,13 @@ workflows:
       - name: Install Gradle 9.3.1
         script: |
           set -e
-
           GRADLE_VERSION="9.3.1"
           GRADLE_HOME="$CM_BUILD_DIR/.gradle-$GRADLE_VERSION"
 
           if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
-            curl -L --fail --retry 3               "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"               -o "$CM_BUILD_DIR/gradle.zip"
+            curl -L --fail --retry 3 \
+              "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+              -o "$CM_BUILD_DIR/gradle.zip"
 
             rm -rf "$GRADLE_HOME" "$CM_BUILD_DIR/gradle-${GRADLE_VERSION}"
             unzip -q "$CM_BUILD_DIR/gradle.zip" -d "$CM_BUILD_DIR"
@@ -33,34 +34,51 @@ workflows:
 
           echo "GRADLE_HOME=$GRADLE_HOME" >> "$CM_ENV"
           echo "PATH=$GRADLE_HOME/bin:$PATH" >> "$CM_ENV"
-
           "$GRADLE_HOME/bin/gradle" --version
 
-      - name: Prepare .env.example
+      - name: Prepare Gemini API configuration
         script: |
           set -e
 
-          if [ ! -f "$CM_BUILD_DIR/.env.example" ]; then
-            printf '%s\n'               '# Safe build-time placeholder'               'GEMINI_API_KEY='               > "$CM_BUILD_DIR/.env.example"
+          # The Secrets Gradle Plugin exposes GEMINI_API_KEY through BuildConfig.
+          # An empty value generates invalid Java (GEMINI_API_KEY = ;), so use a
+          # harmless placeholder when no real key is configured in Codemagic.
+          if [ -n "${GEMINI_API_KEY:-}" ]; then
+            printf '%s\n' "GEMINI_API_KEY=$GEMINI_API_KEY" > "$CM_BUILD_DIR/.env"
+          else
+            printf '%s\n' 'GEMINI_API_KEY=PLACEHOLDER' > "$CM_BUILD_DIR/.env"
           fi
 
-          test -f "$CM_BUILD_DIR/.env.example"
+          printf '%s\n' '# Safe build-time placeholder' 'GEMINI_API_KEY=PLACEHOLDER' > "$CM_BUILD_DIR/.env.example"
+
+          test -s "$CM_BUILD_DIR/.env"
+          test -s "$CM_BUILD_DIR/.env.example"
 
       - name: Prepare debug keystore
         script: |
           set -e
-
           if [ ! -f "$CM_BUILD_DIR/debug.keystore" ]; then
-            keytool -genkeypair -v               -keystore "$CM_BUILD_DIR/debug.keystore"               -storepass android               -keypass android               -alias androiddebugkey               -keyalg RSA               -keysize 2048               -validity 10000               -dname "CN=Android Debug,O=Android,C=US"
+            keytool -genkeypair -v \
+              -keystore "$CM_BUILD_DIR/debug.keystore" \
+              -storepass android \
+              -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
           fi
-
           test -f "$CM_BUILD_DIR/debug.keystore"
 
       - name: Build Android debug APK
         script: |
           set -e
-
-          "$GRADLE_HOME/bin/gradle"             clean             assembleDebug             --stacktrace             --no-daemon             --no-configuration-cache
+          "$GRADLE_HOME/bin/gradle" \
+            clean \
+            assembleDebug \
+            --stacktrace \
+            --no-daemon \
+            --no-configuration-cache
 
     artifacts:
       - app/build/outputs/apk/debug/*.apk
