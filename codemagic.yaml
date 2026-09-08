@@ -30,6 +30,22 @@ workflows:
           echo "PATH=$GRADLE_HOME/bin:$PATH" >> "$CM_ENV"
           "$GRADLE_HOME/bin/gradle" --version
 
+      - name: Prepare Secrets Gradle Plugin defaults
+        script: |
+          set -e
+          # Codemagic/repository exports can omit hidden dot-files. The Android
+          # Secrets Gradle Plugin requires .env.example to exist even for a
+          # debug build, so create a safe placeholder when it is missing.
+          if [ ! -f "$CM_BUILD_DIR/.env.example" ]; then
+            cat > "$CM_BUILD_DIR/.env.example" <<'EOF'
+# Safe build-time placeholder. Configure GEMINI_API_KEY in Codemagic
+# environment variables/secrets if the app needs the Gemini API.
+GEMINI_API_KEY=
+EOF
+          fi
+          echo "Using secrets defaults: $CM_BUILD_DIR/.env.example"
+          test -f "$CM_BUILD_DIR/.env.example"
+
       - name: Build Android debug APK
         script: |
           set -e
