@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Último Tren</string>
+    <string name="title_game">ÚLTIMO TREN</string>
+    <string name="subtitle_game">Un juego de supervivencia y aventura 2D</string>
+    <string name="tap_to_continue">TOCA PARA CONTINUAR</string>
+    <string name="btn_play">JUGAR</string>
+    <string name="btn_settings">AJUSTES</string>
+    <string name="btn_credits">CRÉDITOS</string>
+    <string name="btn_back">VOLVER</string>
+    <string name="btn_resume">CONTINUAR</string>
+    <string name="btn_retry">REINTENTAR</string>
+    <string name="btn_main_menu">MENÚ PRINCIPAL</string>
+    <string name="game_over_title">HAS MUERTO</string>
+    <string name="pause_title">PAUSA</string>
+</resources>
