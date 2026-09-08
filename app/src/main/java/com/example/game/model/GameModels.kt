@@ -5,7 +5,51 @@ enum class GameScreen {
     MAIN_MENU,
     GAMEPLAY,
     SETTINGS,
-    CREDITS
+    CREDITS,
+    UPGRADES
+}
+
+data class GameMapInfo(
+    val id: Int,
+    val name: String,
+    val subtitle: String,
+    val description: String,
+    val iconTag: String,
+    val themeColorHex: Long
+)
+
+val AVAILABLE_MAPS = listOf(
+    GameMapInfo(
+        id = 1,
+        name = "Bosque Sombrío",
+        subtitle = "Lluvia Ácida & Niebla",
+        description = "Pinos gigantes y ruinas ferroviarias bajo una tormenta nocturna continua.",
+        iconTag = "🌲",
+        themeColorHex = 0xFF4CAF50
+    ),
+    GameMapInfo(
+        id = 2,
+        name = "Cañón Carmesí",
+        subtitle = "Atardecer & Polvo Rojo",
+        description = "Mesetas áridas y calor abrasador bajo un cielo crepuscular sangriento.",
+        iconTag = "🏜️",
+        themeColorHex = 0xFFFF7043
+    ),
+    GameMapInfo(
+        id = 3,
+        name = "Tundra Glacial",
+        subtitle = "Ventisca & Silos Helados",
+        description = "Complejo industrial abandonado con vías congeladas a temperaturas extremas.",
+        iconTag = "❄️",
+        themeColorHex = 0xFF40C4FF
+    )
+)
+
+enum class LevelPhase {
+    ARRIVING,   // Tren llegando y frenando a la estación
+    DEFENDING,  // Combate activo: eliminar a los 20 enemigos
+    VICTORY,    // Nivel completado, todos los enemigos eliminados
+    DEPARTING   // Tren acelerando hacia la siguiente estación
 }
 
 enum class EnemyType(val displayName: String, val speed: Float, val maxHp: Float, val damage: Float) {
@@ -25,6 +69,7 @@ enum class EnemyState {
 
 enum class ResourceType(val label: String) {
     CHATARRA("Chatarra"),
+    ORO("Oro"),
     MUNICION("Munición"),
     COMIDA("Comida"),
     MEDICINA("Medicamentos"),
@@ -48,6 +93,7 @@ data class Player(
     var invulnerableTimer: Float = 0f,
     var ammo: Int = 12,
     var scrap: Int = 0,
+    var gold: Int = 0,
     var medkits: Int = 1,
     var fuelCans: Int = 1,
     var currentWagonIndex: Int = 1,
@@ -128,6 +174,29 @@ data class FloatingText(
     var y: Float,
     val color: Long,
     var life: Float = 1.2f
+)
+
+data class TurretProjectile(
+    var x: Float,
+    var y: Float,
+    val vx: Float,
+    val vy: Float,
+    val damage: Float,
+    val isCannon: Boolean = false,
+    var life: Float = 1.2f
+)
+
+data class TrainWeaponState(
+    var turretLevel: Int = 0, // 0 = not owned, 1..3
+    var cannonLevel: Int = 0, // 0 = not owned, 1..3
+    var armorLevel: Int = 0,  // 0 = not owned, 1..3
+    var spotlightLevel: Int = 0, // 0 = not owned, 1..3
+    var turretAngle: Float = 0f,
+    var cannonAngle: Float = 0f,
+    var turretCooldown: Float = 0f,
+    var cannonCooldown: Float = 0f,
+    var turretMuzzleTimer: Float = 0f,
+    var cannonMuzzleTimer: Float = 0f
 )
 
 data class TrainState(

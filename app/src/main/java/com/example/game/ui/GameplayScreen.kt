@@ -28,14 +28,21 @@ fun GameplayScreen(
 ) {
     val isPaused by viewModel.isPaused.collectAsState()
     val isGameOver by viewModel.isGameOver.collectAsState()
+    val isLevelCompleted by viewModel.isLevelCompleted.collectAsState()
+    val levelNumber by viewModel.levelCompletedNumber.collectAsState()
+    val levelEarnedGold by viewModel.levelEarnedGold.collectAsState()
+    val levelEarnedScrap by viewModel.levelEarnedScrap.collectAsState()
+
     val settings by viewModel.settings.collectAsState()
     val lastDistance by viewModel.lastRunDistance.collectAsState()
     val lastScrap by viewModel.lastRunScrap.collectAsState()
+    val lastGold by viewModel.lastRunGold.collectAsState()
     val lastKills by viewModel.lastRunKills.collectAsState()
+    val lastLevel by viewModel.lastRunLevel.collectAsState()
 
     // 60FPS Game loop synced with hardware display VSYNC
-    LaunchedEffect(isPaused, isGameOver) {
-        if (!isPaused && !isGameOver) {
+    LaunchedEffect(isPaused, isGameOver, isLevelCompleted) {
+        if (!isPaused && !isGameOver && !isLevelCompleted) {
             var lastFrameNanos = 0L
             while (isActive) {
                 withFrameNanos { frameNanos ->
@@ -51,7 +58,7 @@ fun GameplayScreen(
 
     // Back press pauses game
     BackHandler {
-        if (!isPaused && !isGameOver) {
+        if (!isPaused && !isGameOver && !isLevelCompleted) {
             viewModel.pauseGame()
         } else if (isPaused) {
             viewModel.resumeGame()
@@ -69,7 +76,7 @@ fun GameplayScreen(
             .focusRequester(focusRequester)
             .focusable()
             .onKeyEvent { keyEvent ->
-                if (isPaused || isGameOver) return@onKeyEvent false
+                if (isPaused || isGameOver || isLevelCompleted) return@onKeyEvent false
                 val isDown = keyEvent.type == KeyEventType.KeyDown
                 val isUp = keyEvent.type == KeyEventType.KeyUp
                 when (keyEvent.key) {
@@ -127,7 +134,7 @@ fun GameplayScreen(
         )
 
         // 3. Virtual Mobile Controls (Landscape)
-        if (!isPaused && !isGameOver) {
+        if (!isPaused && !isGameOver && !isLevelCompleted) {
             GameControls(
                 settings = settings,
                 onLeftPress = { active -> viewModel.setMoveLeft(active) },
@@ -147,6 +154,7 @@ fun GameplayScreen(
                 distance = viewModel.engine.train.distance.toInt(),
                 onResume = { viewModel.resumeGame() },
                 onSettings = { viewModel.navigateTo(GameScreen.SETTINGS) },
+                onUpgrades = { viewModel.navigateTo(GameScreen.UPGRADES) },
                 onMainMenu = { viewModel.navigateTo(GameScreen.MAIN_MENU) }
             )
         }
@@ -156,8 +164,24 @@ fun GameplayScreen(
             GameOverDialog(
                 distance = lastDistance,
                 scrap = lastScrap,
+                gold = lastGold,
                 kills = lastKills,
+                level = lastLevel,
                 onRetry = { viewModel.retryGame() },
+                onUpgrades = { viewModel.navigateTo(GameScreen.UPGRADES) },
+                onMainMenu = { viewModel.navigateTo(GameScreen.MAIN_MENU) }
+            )
+        }
+
+        // 6. Level Complete Victory Dialog
+        if (isLevelCompleted) {
+            LevelCompleteDialog(
+                level = levelNumber,
+                goldEarned = levelEarnedGold,
+                scrapEarned = levelEarnedScrap,
+                targetEnemies = viewModel.engine.totalEnemiesTarget,
+                onNextLevel = { viewModel.nextLevel() },
+                onUpgrades = { viewModel.navigateTo(GameScreen.UPGRADES) },
                 onMainMenu = { viewModel.navigateTo(GameScreen.MAIN_MENU) }
             )
         }

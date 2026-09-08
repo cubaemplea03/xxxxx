@@ -34,27 +34,52 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGameOver = MutableStateFlow(false)
     val isGameOver: StateFlow<Boolean> = _isGameOver.asStateFlow()
 
+    private val _isLevelCompleted = MutableStateFlow(false)
+    val isLevelCompleted: StateFlow<Boolean> = _isLevelCompleted.asStateFlow()
+
+    private val _levelCompletedNumber = MutableStateFlow(1)
+    val levelCompletedNumber: StateFlow<Int> = _levelCompletedNumber.asStateFlow()
+
+    private val _levelEarnedGold = MutableStateFlow(0)
+    val levelEarnedGold: StateFlow<Int> = _levelEarnedGold.asStateFlow()
+
+    private val _levelEarnedScrap = MutableStateFlow(0)
+    val levelEarnedScrap: StateFlow<Int> = _levelEarnedScrap.asStateFlow()
+
     private val _lastRunDistance = MutableStateFlow(0)
     val lastRunDistance: StateFlow<Int> = _lastRunDistance.asStateFlow()
 
     private val _lastRunScrap = MutableStateFlow(0)
     val lastRunScrap: StateFlow<Int> = _lastRunScrap.asStateFlow()
 
+    private val _lastRunGold = MutableStateFlow(0)
+    val lastRunGold: StateFlow<Int> = _lastRunGold.asStateFlow()
+
     private val _lastRunKills = MutableStateFlow(0)
     val lastRunKills: StateFlow<Int> = _lastRunKills.asStateFlow()
+
+    private val _lastRunLevel = MutableStateFlow(0)
+    val lastRunLevel: StateFlow<Int> = _lastRunLevel.asStateFlow()
 
     val renderTick = mutableLongStateOf(0L)
     val hudTick = mutableLongStateOf(0L)
 
     val engine = GameEngine(
         audioEngine = audioEngine,
-        onGameOver = { dist, scrap, kills ->
-            triggerGameOver(dist, scrap, kills)
+        onGameOver = { dist, scrap, gold, kills, level ->
+            triggerGameOver(dist, scrap, gold, kills, level)
+        },
+        onLevelComplete = { lvl, kills, gold, scrap ->
+            triggerLevelComplete(lvl, kills, gold, scrap)
+        },
+        onPlayerLevelUp = { newLevel ->
+            viewModelScope.launch {
+                repository.savePlayerLevel(newLevel)
+            }
         }
     )
 
     init {
-        // Load initial settings and stats
         viewModelScope.launch {
             repository.settingsFlow.collect { s ->
                 val current = s ?: GameSettingsEntity()
@@ -70,7 +95,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             repository.statsFlow.collect { st ->
-                _stats.value = st ?: GameStatsEntity()
+                val current = st ?: GameStatsEntity()
+                _stats.value = current
+                engine.applyUpgrades(current)
             }
         }
 
@@ -84,18 +111,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             startGame()
         } else {
             resetInputs()
-            audioEngine.stopTrainRhythm()
         }
     }
 
     fun startGame() {
+        startSurvivalGame(engine.selectedMapId)
+    }
+
+    fun startSurvivalGame(mapId: Int = 1) {
+        _screen.value = GameScreen.GAMEPLAY
         _isGameOver.value = false
         _isPaused.value = false
+        _isLevelCompleted.value = false
         resetInputs()
-        engine.resetGame()
+        engine.applyUpgrades(_stats.value)
+        val finalMap = if (mapId <= 0) (1..3).random() else mapId
+        engine.resetGame(finalMap)
         renderTick.longValue = 0L
         hudTick.longValue = 0L
-        audioEngine.startTrainRhythm()
+    }
+
+    fun nextLevel() {
+        _isLevelCompleted.value = false
+        resetInputs()
+        engine.applyUpgrades(_stats.value)
+        engine.startNextLevel()
     }
 
     fun updateGame(dt: Float) {
@@ -118,32 +158,52 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _isPaused.value = true
         engine.isPaused = true
         resetInputs()
-        audioEngine.stopTrainRhythm()
         audioEngine.playButtonClick()
     }
 
     fun resumeGame() {
         _isPaused.value = false
         engine.isPaused = false
-        audioEngine.startTrainRhythm()
         audioEngine.playButtonClick()
     }
 
     fun retryGame() {
         audioEngine.playButtonClick()
-        startGame()
+        startSurvivalGame(engine.selectedMapId)
     }
 
-    private fun triggerGameOver(dist: Int, scrap: Int, kills: Int) {
+    private fun triggerGameOver(dist: Int, scrap: Int, gold: Int, kills: Int, level: Int) {
         _isGameOver.value = true
         _lastRunDistance.value = dist
         _lastRunScrap.value = scrap
+        _lastRunGold.value = gold
         _lastRunKills.value = kills
+        _lastRunLevel.value = level
         resetInputs()
-        audioEngine.stopTrainRhythm()
 
         viewModelScope.launch {
-            repository.saveGameRun(dist, scrap, kills)
+            repository.saveGameRun(dist, scrap, gold, kills, level)
+        }
+    }
+
+    private fun triggerLevelComplete(lvl: Int, kills: Int, gold: Int, scrap: Int) {
+        _isLevelCompleted.value = true
+        _levelCompletedNumber.value = lvl
+        _levelEarnedGold.value = gold
+        _levelEarnedScrap.value = scrap
+        resetInputs()
+
+        viewModelScope.launch {
+            repository.saveGameRun(engine.train.distance.toInt(), scrap, gold, kills, lvl)
+        }
+    }
+
+    fun buyTrainUpgrade(upgradeId: String, cost: Int) {
+        viewModelScope.launch {
+            val success = repository.purchaseTrainUpgrade(upgradeId, cost)
+            if (success) {
+                audioEngine.playGoldPickup()
+            }
         }
     }
 

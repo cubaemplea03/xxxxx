@@ -28,7 +28,7 @@ fun MainGameApp(
     ) {
         Crossfade(
             targetState = currentScreen,
-            animationSpec = tween(400),
+            animationSpec = tween(350),
             label = "screen_crossfade"
         ) { screen ->
             when (screen) {
@@ -45,6 +45,9 @@ fun MainGameApp(
                         onPlayClick = {
                             viewModel.navigateTo(GameScreen.GAMEPLAY)
                         },
+                        onUpgradesClick = {
+                            viewModel.navigateTo(GameScreen.UPGRADES)
+                        },
                         onSettingsClick = {
                             viewModel.navigateTo(GameScreen.SETTINGS)
                         },
@@ -55,6 +58,14 @@ fun MainGameApp(
                 }
                 GameScreen.GAMEPLAY -> {
                     GameplayScreen(viewModel = viewModel)
+                }
+                GameScreen.UPGRADES -> {
+                    TrainUpgradesScreen(
+                        viewModel = viewModel,
+                        onBack = {
+                            viewModel.navigateTo(GameScreen.MAIN_MENU)
+                        }
+                    )
                 }
                 GameScreen.SETTINGS -> {
                     SettingsScreen(

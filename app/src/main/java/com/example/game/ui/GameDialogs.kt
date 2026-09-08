@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -39,6 +41,7 @@ fun PauseDialog(
     distance: Int,
     onResume: () -> Unit,
     onSettings: () -> Unit,
+    onUpgrades: () -> Unit,
     onMainMenu: () -> Unit
 ) {
     Box(
@@ -57,7 +60,7 @@ fun PauseDialog(
                     )
                 )
                 .border(1.5.dp, Color(0x66B0BEC5), RoundedCornerShape(20.dp))
-                .padding(24.dp)
+                .padding(20.dp)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -65,21 +68,21 @@ fun PauseDialog(
             ) {
                 Text(
                     text = "PAUSA",
-                    fontSize = 26.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 4.sp,
                     color = Color.White
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Distancia alcanzada: $distance m",
-                    fontSize = 13.sp,
+                    text = "Distancia recorrida: $distance m",
+                    fontSize = 12.sp,
                     color = Color(0xFFFFD54F),
                     fontWeight = FontWeight.Medium
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Continuar
                 Button(
@@ -88,7 +91,7 @@ fun PauseDialog(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(46.dp)
+                        .height(42.dp)
                         .testTag("btn_resume")
                 ) {
                     Icon(
@@ -101,11 +104,37 @@ fun PauseDialog(
                         text = "CONTINUAR",
                         color = Color.Black,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 13.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Taller de Mejoras
+                Button(
+                    onClick = onUpgrades,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37474F)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                        .testTag("btn_pause_upgrades")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Build,
+                        contentDescription = "Mejoras del Tren",
+                        tint = Color(0xFFFFD700)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "MEJORAS DEL TREN",
+                        color = Color(0xFFFFD700),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Ajustes
                 OutlinedButton(
@@ -114,7 +143,7 @@ fun PauseDialog(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp)
+                        .height(40.dp)
                         .testTag("btn_pause_settings")
                 ) {
                     Icon(
@@ -126,11 +155,11 @@ fun PauseDialog(
                     Text(
                         text = "AJUSTES",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 12.5.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Volver al Menú
                 OutlinedButton(
@@ -139,7 +168,7 @@ fun PauseDialog(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8A80)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp)
+                        .height(40.dp)
                         .testTag("btn_pause_menu")
                 ) {
                     Icon(
@@ -151,7 +180,7 @@ fun PauseDialog(
                     Text(
                         text = "VOLVER AL MENÚ",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 12.5.sp
                     )
                 }
             }
@@ -163,8 +192,11 @@ fun PauseDialog(
 fun GameOverDialog(
     distance: Int,
     scrap: Int,
+    gold: Int,
     kills: Int,
+    level: Int = 0,
     onRetry: () -> Unit,
+    onUpgrades: () -> Unit,
     onMainMenu: () -> Unit
 ) {
     Box(
@@ -175,7 +207,7 @@ fun GameOverDialog(
     ) {
         Box(
             modifier = Modifier
-                .width(420.dp)
+                .width(440.dp)
                 .clip(RoundedCornerShape(22.dp))
                 .background(
                     Brush.verticalGradient(
@@ -183,28 +215,28 @@ fun GameOverDialog(
                     )
                 )
                 .border(2.dp, Color(0xFFE53935), RoundedCornerShape(22.dp))
-                .padding(26.dp)
+                .padding(22.dp)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "HAS MUERTO",
-                    fontSize = 28.sp,
+                    text = "HAS CAÍDO",
+                    fontSize = 26.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 5.sp,
+                    letterSpacing = 4.sp,
                     color = Color(0xFFFF5252)
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "El convoy continúa sin ti...",
-                    fontSize = 13.sp,
+                    text = "Los infectados superaron tus defensas.",
+                    fontSize = 12.sp,
                     color = Color(0xFFB0BEC5)
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Results Card
                 Row(
@@ -213,28 +245,29 @@ fun GameOverDialog(
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0x66000000))
                         .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(12.dp))
-                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                        .padding(vertical = 10.dp, horizontal = 6.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    ResultStat(label = "Distancia", value = "$distance m", color = Color(0xFFFFD54F))
+                    ResultStat(label = "Nivel", value = "N$level", color = Color(0xFFFFD54F))
                     ResultStat(label = "Bajas", value = "$kills", color = Color(0xFFFF7043))
-                    ResultStat(label = "Chatarra", value = "$scrap", color = Color(0xFF81C784))
+                    ResultStat(label = "Oro", value = "+$gold", color = Color(0xFFFFD700))
+                    ResultStat(label = "Chatarra", value = "+$scrap", color = Color(0xFF81C784))
                 }
 
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Reintentar
                     Button(
                         onClick = onRetry,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(44.dp)
                             .testTag("btn_retry")
                     ) {
                         Icon(
@@ -242,35 +275,193 @@ fun GameOverDialog(
                             contentDescription = "Reintentar",
                             tint = Color.White
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "REINTENTAR",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.5.sp
+                            fontSize = 12.sp
                         )
                     }
 
-                    // Menú Principal
+                    // Taller
+                    Button(
+                        onClick = onUpgrades,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37474F)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .testTag("btn_gameover_upgrades")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Build,
+                            contentDescription = "Mejoras",
+                            tint = Color(0xFFFFD700)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "MEJORAS",
+                            color = Color(0xFFFFD700),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    // Menú
                     OutlinedButton(
                         onClick = onMainMenu,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(44.dp)
                             .testTag("btn_gameover_menu")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "Menú Principal",
-                            tint = Color(0xFFB0BEC5)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "MENÚ PRINCIPAL",
+                            text = "MENÚ",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.5.sp
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LevelCompleteDialog(
+    level: Int,
+    goldEarned: Int,
+    scrapEarned: Int,
+    targetEnemies: Int = 20,
+    onNextLevel: () -> Unit,
+    onUpgrades: () -> Unit,
+    onMainMenu: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xE6081017)),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(440.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF142C1E), Color(0xFF0C1B13))
+                    )
+                )
+                .border(2.dp, Color(0xFF00E676), RoundedCornerShape(22.dp))
+                .padding(22.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "¡ZONA DESPEJADA!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 3.sp,
+                    color = Color(0xFF76FF03)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Has derrotado a los $targetEnemies asaltantes en el Nivel $level.",
+                    fontSize = 12.sp,
+                    color = Color(0xFFC8E6C9)
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Stats row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0x66000000))
+                        .border(1.dp, Color(0x3300E676), RoundedCornerShape(12.dp))
+                        .padding(vertical = 10.dp, horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    ResultStat(label = "Enemigos", value = "$targetEnemies / $targetEnemies", color = Color(0xFF76FF03))
+                    ResultStat(label = "Oro Obtenido", value = "+$goldEarned", color = Color(0xFFFFD700))
+                    ResultStat(label = "Chatarra", value = "+$scrapEarned", color = Color(0xFF81C784))
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Siguiente Nivel
+                    Button(
+                        onClick = onNextLevel,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .height(44.dp)
+                            .testTag("btn_next_level")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FastForward,
+                            contentDescription = "Siguiente",
+                            tint = Color.Black
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "SIGUIENTE NIVEL",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    // Taller de Mejoras
+                    Button(
+                        onClick = onUpgrades,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E3B43)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .testTag("btn_level_upgrades")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Build,
+                            contentDescription = "Mejoras",
+                            tint = Color(0xFFFFD700)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "MEJORAS",
+                            color = Color(0xFFFFD700),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.5.sp
+                        )
+                    }
+
+                    // Menú
+                    OutlinedButton(
+                        onClick = onMainMenu,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        modifier = Modifier
+                            .weight(0.9f)
+                            .height(44.dp)
+                            .testTag("btn_level_menu")
+                    ) {
+                        Text(
+                            text = "MENÚ",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.5.sp
                         )
                     }
                 }
@@ -288,6 +479,6 @@ private fun ResultStat(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, fontSize = 11.sp, color = Color(0xFF90A4AE))
         Spacer(modifier = Modifier.height(2.dp))
-        Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = color)
+        Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }

@@ -23,9 +23,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -34,6 +37,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +53,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.game.data.GameStatsEntity
@@ -55,10 +62,13 @@ import com.example.game.data.GameStatsEntity
 fun MainMenuScreen(
     stats: GameStatsEntity,
     onPlayClick: () -> Unit,
+    onUpgradesClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onCreditsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showMultiplayerDialog by remember { mutableStateOf(false) }
+
     val infiniteTransition = rememberInfiniteTransition(label = "menu_anim")
     val ambientShift by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -175,21 +185,21 @@ fun MainMenuScreen(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 48.dp, vertical = 20.dp),
+                .padding(horizontal = 40.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
                 modifier = Modifier
-                    .weight(1.1f)
+                    .weight(1.2f)
                     .fillMaxHeight(),
                 verticalArrangement = Arrangement.Center
             ) {
                 // Game Logo Title
                 Text(
                     text = "ÚLTIMO TREN",
-                    fontSize = 42.sp,
+                    fontSize = 38.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 6.sp,
+                    letterSpacing = 5.sp,
                     fontFamily = FontFamily.Monospace,
                     color = Color.White,
                     style = TextStyle(
@@ -201,47 +211,67 @@ fun MainMenuScreen(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "ACCIÓN Y SUPERVIVENCIA EN LAS VÍAS",
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp,
                     color = Color(0xFFFFCA28)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Stats Chip if player has played
-                if (stats.highScoreDistance > 0) {
+                // Stats & Gold Pill
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Gold badge
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0x881E2833))
-                            .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xEE2A1D05))
+                            .border(1.2.dp, Color(0xFFFFD700), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Récord",
-                                tint = Color(0xFFFFD54F),
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.MonetizationOn,
+                                contentDescription = "Oro",
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(15.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Récord: ${stats.highScoreDistance} m  |  Chatarra: ${stats.totalScrap}",
-                                fontSize = 12.sp,
+                                text = "${stats.totalGold} ORO",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFFFFE082)
+                            )
+                        }
+                    }
+
+                    if (stats.highestLevel > 1) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0x881E2833))
+                                .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "NIVEL MÁX: ${stats.highestLevel}",
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFECEFF1)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(18.dp))
-                } else {
-                    Spacer(modifier = Modifier.height(10.dp))
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Primary JUGAR Button
                 Button(
@@ -250,32 +280,111 @@ fun MainMenuScreen(
                         containerColor = Color(0xFFFFB300),
                         contentColor = Color.Black
                     ),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
                     modifier = Modifier
                         .width(260.dp)
-                        .height(54.dp)
-                        .border(1.5.dp, Color(0xFFFFF9C4), RoundedCornerShape(14.dp))
+                        .height(48.dp)
+                        .border(1.5.dp, Color(0xFFFFF9C4), RoundedCornerShape(12.dp))
                         .testTag("btn_play")
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Jugar",
                         tint = Color.Black,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "JUGAR",
-                        fontSize = 17.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 3.sp
+                        letterSpacing = 2.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                // MEJORAS DEL TREN Button
+                Button(
+                    onClick = onUpgradesClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF263238),
+                        contentColor = Color(0xFFFFD700)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .width(260.dp)
+                        .height(44.dp)
+                        .border(1.2.dp, Color(0xFFFFD700), RoundedCornerShape(12.dp))
+                        .testTag("btn_menu_upgrades")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Build,
+                        contentDescription = "Mejoras del Tren",
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "MEJORAS DEL TREN",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = Color(0xFFFFD700)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // MULTIJUGADOR (EN DESARROLLO)
+                Button(
+                    onClick = { showMultiplayerDialog = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1E2933),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .width(260.dp)
+                        .height(44.dp)
+                        .border(1.2.dp, Color(0xFF00E5FF).copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                        .testTag("btn_menu_multiplayer")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Multijugador",
+                        tint = Color(0xFF80D8FF),
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "MULTIJUGADOR",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFE65100))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "EN DESARROLLO",
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFFFFE0B2),
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     // AJUSTES Button
                     OutlinedButton(
                         onClick = onSettingsClick,
@@ -283,23 +392,23 @@ fun MainMenuScreen(
                             containerColor = Color(0xAA1C262F),
                             contentColor = Color.White
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
-                            .width(124.dp)
-                            .height(44.dp)
-                            .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(12.dp))
+                            .width(125.dp)
+                            .height(40.dp)
+                            .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(10.dp))
                             .testTag("btn_settings")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Ajustes",
                             tint = Color(0xFFECEFF1),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "AJUSTES",
-                            fontSize = 11.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
@@ -312,23 +421,23 @@ fun MainMenuScreen(
                             containerColor = Color(0xAA1C262F),
                             contentColor = Color.White
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
-                            .width(124.dp)
-                            .height(44.dp)
-                            .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(12.dp))
+                            .width(125.dp)
+                            .height(40.dp)
+                            .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(10.dp))
                             .testTag("btn_credits")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = "Créditos",
                             tint = Color(0xFFECEFF1),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "CRÉDITOS",
-                            fontSize = 11.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
@@ -337,7 +446,99 @@ fun MainMenuScreen(
             }
 
             // Right side spacer for locomotive visual composition
-            Spacer(modifier = Modifier.weight(0.9f))
+            Spacer(modifier = Modifier.weight(0.8f))
+        }
+
+        // Multiplayer In-Development Dialog
+        if (showMultiplayerDialog) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xCC080C10)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(400.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF162534), Color(0xFF0F1822))
+                            )
+                        )
+                        .border(1.5.dp, Color(0xFF00E5FF), RoundedCornerShape(20.dp))
+                        .padding(22.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFE65100))
+                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "EN DESARROLLO",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                letterSpacing = 1.5.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "MODO MULTIJUGADOR",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp,
+                            color = Color.White
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "El modo cooperativo en línea para defender el tren junto a otros supervivientes y maquinistas está actualmente en desarrollo por Star App.",
+                            fontSize = 12.sp,
+                            color = Color(0xFFB0BEC5),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "¡Estará disponible en una próxima actualización!",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF80D8FF),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        Button(
+                            onClick = { showMultiplayerDialog = false },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(42.dp)
+                                .testTag("btn_close_multiplayer_dialog")
+                        ) {
+                            Text(
+                                text = "ENTENDIDO",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

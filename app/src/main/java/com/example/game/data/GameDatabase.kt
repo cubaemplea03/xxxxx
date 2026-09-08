@@ -15,9 +15,16 @@ data class GameStatsEntity(
     @PrimaryKey val id: Int = 1,
     val highScoreDistance: Int = 0,
     val totalScrap: Int = 0,
+    val totalGold: Int = 0,
     val totalKills: Int = 0,
     val gamesPlayed: Int = 0,
-    val lastDistance: Int = 0
+    val lastDistance: Int = 0,
+    val highestLevel: Int = 1,
+    // Train upgrades
+    val turretLevel: Int = 0,     // 0 = none, 1..3
+    val cannonLevel: Int = 0,     // 0 = none, 1..3
+    val armorLevel: Int = 0,      // 0 = none, 1..3
+    val spotlightLevel: Int = 0   // 0 = none, 1..3
 )
 
 @Entity(tableName = "game_settings")
@@ -50,7 +57,7 @@ interface GameDao {
 
 @Database(
     entities = [GameStatsEntity::class, GameSettingsEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class GameDatabase : RoomDatabase() {

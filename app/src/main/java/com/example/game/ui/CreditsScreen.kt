@@ -119,7 +119,72 @@ fun CreditsScreen(
                 fontWeight = FontWeight.Medium
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Main Creator & Company Banner Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xFF263238), Color(0xFF18232B), Color(0xFF263238))
+                        )
+                    )
+                    .border(1.5.dp, Color(0xFFFFB300), RoundedCornerShape(16.dp))
+                    .padding(vertical = 12.dp, horizontal = 20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "EMPRESA CREADORA",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp,
+                            color = Color(0xFFFFB300)
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "Star App",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                            color = Color.White
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(36.dp)
+                            .background(Color(0x55FFFFFF))
+                    )
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "DESARROLLADOR",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp,
+                            color = Color(0xFFFFB300)
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "Marcos Exposito Benitez",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                            color = Color(0xFFFFE082)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Roles Grid in 2 Columns in Landscape
             Row(
@@ -128,12 +193,12 @@ fun CreditsScreen(
                     .clip(RoundedCornerShape(18.dp))
                     .background(Color(0x88131B22))
                     .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(18.dp))
-                    .padding(20.dp),
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     CreditRole(role = "DIRECCIÓN DE PROYECTO", name = "Antigravity Creative Studio")
                     CreditRole(role = "PROGRAMACIÓN & MOTOR 2D", name = "Android Jetpack & DeepMind Engine Team")
@@ -142,7 +207,7 @@ fun CreditsScreen(
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     CreditRole(role = "ARTE & PIXEL ART", name = "Dark Atmospheric Pixel Lab")
                     CreditRole(role = "MÚSICA & ATMÓSFERA", name = "Dark Rails Synth Synthesizer")
