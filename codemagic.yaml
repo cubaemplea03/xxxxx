@@ -7,20 +7,39 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: "com.aistudio.ultimotren.vjrxqp"
+      java: 17
 
     scripts:
-      - name: Set Android SDK location
+      - name: Configure Android SDK
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
 
-      - name: Make Gradle executable
+      - name: Install Gradle 9.3.1
         script: |
-          chmod +x ./gradlew
+          set -e
+          GRADLE_VERSION="9.3.1"
+          GRADLE_HOME="$CM_BUILD_DIR/.gradle-$GRADLE_VERSION"
+          if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
+            curl -L --fail --retry 3 "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o "$CM_BUILD_DIR/gradle.zip"
+            rm -rf "$GRADLE_HOME" "$CM_BUILD_DIR/gradle-${GRADLE_VERSION}"
+            unzip -q "$CM_BUILD_DIR/gradle.zip" -d "$CM_BUILD_DIR"
+            mv "$CM_BUILD_DIR/gradle-${GRADLE_VERSION}" "$GRADLE_HOME"
+            rm -f "$CM_BUILD_DIR/gradle.zip"
+          fi
+          echo "GRADLE_HOME=$GRADLE_HOME" >> "$CM_ENV"
+          echo "PATH=$GRADLE_HOME/bin:$PATH" >> "$CM_ENV"
+          "$GRADLE_HOME/bin/gradle" --version
 
       - name: Build Android debug APK
         script: |
-          ./gradlew clean assembleDebug --stacktrace
+          set -e
+          "$GRADLE_HOME/bin/gradle" clean assembleDebug --stacktrace --no-daemon
 
     artifacts:
       - app/build/outputs/apk/debug/*.apk
-      - app/build/outputs/**/*.apk
+
+    publishing:
+      scripts:
+        - name: Build completed
+          script: |
+            echo "Último Tren APK build completed successfully."
