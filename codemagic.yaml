@@ -1,6 +1,6 @@
 workflows:
   android-debug:
-    name: Último Tren - Android Debug APK
+    name: Ultimo Tren - Android Debug APK
     max_build_duration: 120
     instance_type: mac_mini_m2
 
@@ -19,13 +19,17 @@ workflows:
           set -e
           GRADLE_VERSION="9.3.1"
           GRADLE_HOME="$CM_BUILD_DIR/.gradle-$GRADLE_VERSION"
+
           if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
-            curl -L --fail --retry 3 "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o "$CM_BUILD_DIR/gradle.zip"
+            curl -L --fail --retry 3 \
+              "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+              -o "$CM_BUILD_DIR/gradle.zip"
             rm -rf "$GRADLE_HOME" "$CM_BUILD_DIR/gradle-${GRADLE_VERSION}"
             unzip -q "$CM_BUILD_DIR/gradle.zip" -d "$CM_BUILD_DIR"
             mv "$CM_BUILD_DIR/gradle-${GRADLE_VERSION}" "$GRADLE_HOME"
             rm -f "$CM_BUILD_DIR/gradle.zip"
           fi
+
           echo "GRADLE_HOME=$GRADLE_HOME" >> "$CM_ENV"
           echo "PATH=$GRADLE_HOME/bin:$PATH" >> "$CM_ENV"
           "$GRADLE_HOME/bin/gradle" --version
@@ -33,18 +37,31 @@ workflows:
       - name: Prepare Secrets Gradle Plugin defaults
         script: |
           set -e
-          # Codemagic/repository exports can omit hidden dot-files. The Android
-          # Secrets Gradle Plugin requires .env.example to exist even for a
-          # debug build, so create a safe placeholder when it is missing.
           if [ ! -f "$CM_BUILD_DIR/.env.example" ]; then
-            cat > "$CM_BUILD_DIR/.env.example" <<'EOF'
-# Safe build-time placeholder. Configure GEMINI_API_KEY in Codemagic
-# environment variables/secrets if the app needs the Gemini API.
-GEMINI_API_KEY=
-EOF
+            printf '%s\n' \
+              '# Safe build-time placeholder' \
+              'GEMINI_API_KEY=' \
+              > "$CM_BUILD_DIR/.env.example"
           fi
+
           echo "Using secrets defaults: $CM_BUILD_DIR/.env.example"
           test -f "$CM_BUILD_DIR/.env.example"
+
+      - name: Prepare debug keystore
+        script: |
+          set -e
+          if [ ! -f "$CM_BUILD_DIR/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$CM_BUILD_DIR/debug.keystore" \
+              -storepass android \
+              -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          test -f "$CM_BUILD_DIR/debug.keystore"
 
       - name: Build Android debug APK
         script: |
@@ -53,9 +70,4 @@ EOF
 
     artifacts:
       - app/build/outputs/apk/debug/*.apk
-
-    publishing:
-      scripts:
-        - name: Build completed
-          script: |
-            echo "Último Tren APK build completed successfully."
+      - app/build/outputs/**/*.apk
