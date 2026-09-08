@@ -5,25 +5,26 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
+      java: 17
       vars:
         PACKAGE_NAME: "com.aistudio.ultimotren.vjrxqp"
-      java: 17
 
     scripts:
       - name: Configure Android SDK
         script: |
+          set -e
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
 
       - name: Install Gradle 9.3.1
         script: |
           set -e
+
           GRADLE_VERSION="9.3.1"
           GRADLE_HOME="$CM_BUILD_DIR/.gradle-$GRADLE_VERSION"
 
           if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
-            curl -L --fail --retry 3 \
-              "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
-              -o "$CM_BUILD_DIR/gradle.zip"
+            curl -L --fail --retry 3               "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"               -o "$CM_BUILD_DIR/gradle.zip"
+
             rm -rf "$GRADLE_HOME" "$CM_BUILD_DIR/gradle-${GRADLE_VERSION}"
             unzip -q "$CM_BUILD_DIR/gradle.zip" -d "$CM_BUILD_DIR"
             mv "$CM_BUILD_DIR/gradle-${GRADLE_VERSION}" "$GRADLE_HOME"
@@ -32,41 +33,34 @@ workflows:
 
           echo "GRADLE_HOME=$GRADLE_HOME" >> "$CM_ENV"
           echo "PATH=$GRADLE_HOME/bin:$PATH" >> "$CM_ENV"
+
           "$GRADLE_HOME/bin/gradle" --version
 
-      - name: Prepare Secrets Gradle Plugin defaults
+      - name: Prepare .env.example
         script: |
           set -e
+
           if [ ! -f "$CM_BUILD_DIR/.env.example" ]; then
-            printf '%s\n' \
-              '# Safe build-time placeholder' \
-              'GEMINI_API_KEY=' \
-              > "$CM_BUILD_DIR/.env.example"
+            printf '%s\n'               '# Safe build-time placeholder'               'GEMINI_API_KEY='               > "$CM_BUILD_DIR/.env.example"
           fi
 
-          echo "Using secrets defaults: $CM_BUILD_DIR/.env.example"
           test -f "$CM_BUILD_DIR/.env.example"
 
       - name: Prepare debug keystore
         script: |
           set -e
+
           if [ ! -f "$CM_BUILD_DIR/debug.keystore" ]; then
-            keytool -genkeypair -v \
-              -keystore "$CM_BUILD_DIR/debug.keystore" \
-              -storepass android \
-              -keypass android \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
+            keytool -genkeypair -v               -keystore "$CM_BUILD_DIR/debug.keystore"               -storepass android               -keypass android               -alias androiddebugkey               -keyalg RSA               -keysize 2048               -validity 10000               -dname "CN=Android Debug,O=Android,C=US"
           fi
+
           test -f "$CM_BUILD_DIR/debug.keystore"
 
       - name: Build Android debug APK
         script: |
           set -e
-          "$GRADLE_HOME/bin/gradle" clean assembleDebug --stacktrace --no-daemon
+
+          "$GRADLE_HOME/bin/gradle"             clean             assembleDebug             --stacktrace             --no-daemon             --no-configuration-cache
 
     artifacts:
       - app/build/outputs/apk/debug/*.apk
