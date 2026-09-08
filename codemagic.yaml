@@ -2,7 +2,7 @@ workflows:
   android-debug:
     name: Último Tren - Android Debug APK
     max_build_duration: 120
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
 
     environment:
       vars:
@@ -13,12 +13,9 @@ workflows:
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
 
-      - name: Show project information
+      - name: Make Gradle executable
         script: |
-          echo "Building Último Tren"
-          echo "Package: $PACKAGE_NAME"
-          java -version
-          ./gradlew --version
+          chmod +x ./gradlew
 
       - name: Build Android debug APK
         script: |
@@ -26,10 +23,4 @@ workflows:
 
     artifacts:
       - app/build/outputs/apk/debug/*.apk
-      - app/build/outputs/apk/**/*.apk
-
-    publishing:
-      scripts:
-        - name: Build completed
-          script: |
-            echo "Último Tren APK build completed successfully."
+      - app/build/outputs/**/*.apk
