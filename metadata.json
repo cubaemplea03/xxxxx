@@ -1,0 +1,6 @@
+{
+  "name": "Último Tren",
+  "description": "Juego 2D de plataformas, acción y supervivencia en orientación horizontal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
