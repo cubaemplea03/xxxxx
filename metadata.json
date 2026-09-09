@@ -1,6 +1,6 @@
 {
   "name": "Último Tren",
-  "description": "Juego 2D de plataformas, acción y supervivencia en orientación horizontal.",
+  "description": "Juego 2D de supervivencia con tren detallado y realista (bielas animadas, bogies, caldera, remaches y humo volumétrico), bestiario y vestuario.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
