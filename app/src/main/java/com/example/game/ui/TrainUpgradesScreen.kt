@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FlashlightOn
@@ -65,8 +67,8 @@ fun TrainUpgradesScreen(
     onBack: () -> Unit
 ) {
     val stats by viewModel.stats.collectAsState()
-    val availableGold = stats.totalGold
-    val playerLevel = stats.highestLevel
+    val availableGold = maxOf(stats.totalGold, viewModel.engine.player.gold)
+    val playerLevel = maxOf(stats.highestLevel, viewModel.engine.playerSurvivalLevel)
 
     val upgrades = listOf(
         TrainUpgradeItem(
@@ -165,7 +167,7 @@ fun TrainUpgradesScreen(
                     listOf(Color(0xFF0D131A), Color(0xFF141C24), Color(0xFF1B242D))
                 )
             )
-            .padding(horizontal = 24.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header Row: Back button, title, current gold display
@@ -178,7 +180,7 @@ fun TrainUpgradesScreen(
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(Color(0x99263238))
                             .border(1.dp, Color(0x55FFFFFF), CircleShape)
@@ -187,23 +189,24 @@ fun TrainUpgradesScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
                     Column {
                         Text(
                             text = "TALLER DE MEJORAS DEL TREN",
                             color = Color(0xFFFFD54F),
-                            fontSize = 18.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Black
                         )
                         Text(
-                            text = "Arma tu convoy con torretas y cañones para que te ayuden en combate",
+                            text = "Instala y mejora torretas y cañones para defender el convoy",
                             color = Color(0xFFB0BEC5),
-                            fontSize = 11.sp
+                            fontSize = 10.5.sp
                         )
                     }
                 }
@@ -212,50 +215,50 @@ fun TrainUpgradesScreen(
                     // Player Survival Level badge
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xEE102A43))
-                            .border(1.5.dp, Color(0xFF00E5FF), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .border(1.5.dp, Color(0xFF00E5FF), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = "Nivel",
                                 tint = Color(0xFFFFD700),
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
                                 text = "NIVEL $playerLevel SUPERVIVIENTE",
                                 color = Color(0xFFE0F7FA),
-                                fontSize = 13.sp,
+                                fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Black
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     // Available Gold badge
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xEE2A1D05))
-                            .border(1.5.dp, Color(0xFFFFD700), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                            .border(1.5.dp, Color(0xFFFFD700), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.MonetizationOn,
                                 contentDescription = "Oro",
                                 tint = Color(0xFFFFD700),
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(17.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
                                 text = "$availableGold ORO",
                                 color = Color(0xFFFFE082),
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Black
                             )
                         }
@@ -263,15 +266,15 @@ fun TrainUpgradesScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Horizontal row of upgrade cards
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 6.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(upgrades) { item ->
                     UpgradeCard(
@@ -301,24 +304,28 @@ private fun UpgradeCard(
 
     Box(
         modifier = Modifier
-            .width(235.dp)
+            .width(210.dp)
             .fillMaxSize()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(Color(0xE6161F28))
             .border(
                 1.dp,
                 if (!isLevelUnlocked) Color(0x44E53935)
                 else if (item.currentLevel > 0) item.iconColor.copy(alpha = 0.6f)
                 else Color(0x33FFFFFF),
-                RoundedCornerShape(14.dp)
+                RoundedCornerShape(12.dp)
             )
-            .padding(14.dp)
+            .padding(10.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxSize()
         ) {
-            Column {
+            // Scrollable upper content inside the card
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 // Top: Icon & Level Tag
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -327,7 +334,7 @@ private fun UpgradeCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(34.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isLevelUnlocked) item.iconColor.copy(alpha = 0.15f) else Color(0x33B0BEC5)),
                         contentAlignment = Alignment.Center
@@ -336,7 +343,7 @@ private fun UpgradeCard(
                             imageVector = if (isLevelUnlocked) item.icon else Icons.Default.Lock,
                             contentDescription = item.name,
                             tint = if (isLevelUnlocked) item.iconColor else Color(0xFFB0BEC5),
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
@@ -348,7 +355,7 @@ private fun UpgradeCard(
                                 else if (item.currentLevel > 0) item.iconColor.copy(alpha = 0.2f)
                                 else Color(0x33FFFFFF)
                             )
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .padding(horizontal = 7.dp, vertical = 2.5.dp)
                     ) {
                         Text(
                             text = if (isMaxed) "MÁXIMO"
@@ -357,54 +364,54 @@ private fun UpgradeCard(
                             color = if (!isLevelUnlocked) Color(0xFFFF8A80)
                                     else if (item.currentLevel > 0) item.iconColor
                                     else Color(0xFFB0BEC5),
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Title
                 Text(
                     text = item.name,
                     color = Color.White,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 // Description
                 Text(
                     text = item.description,
                     color = Color(0xFF90A4AE),
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
-                    maxLines = 3
+                    fontSize = 9.5.sp,
+                    lineHeight = 12.sp,
+                    maxLines = 2
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
-
                 if (!isLevelUnlocked) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(6.dp))
                             .background(Color(0x33E53935))
                             .border(1.dp, Color(0x66FF5252), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "🔒 Requiere Nivel ${item.requiredLevel} (${item.requiredLevel * 15} bajas)",
+                            text = "🔒 Requiere Nivel ${item.requiredLevel} (${item.requiredLevel * 10} bajas)",
                             color = Color(0xFFFF8A80),
-                            fontSize = 9.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Benefits breakdown
                 item.benefits.forEachIndexed { idx, benefit ->
@@ -412,19 +419,22 @@ private fun UpgradeCard(
                     Text(
                         text = if (isUnlocked) "✓ $benefit" else "• $benefit",
                         color = if (isUnlocked) Color(0xFF81C784) else Color(0xFF546E7A),
-                        fontSize = 9.sp,
+                        fontSize = 8.5.sp,
+                        lineHeight = 11.sp,
                         fontWeight = if (isUnlocked) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }
 
-            // Purchase / Action Button
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Purchase / Action Button - FIXED AT BOTTOM, ALWAYS VISIBLE
             Button(
                 onClick = onBuy,
                 enabled = canAfford,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(38.dp)
+                    .height(34.dp)
                     .testTag("buy_${item.id.lowercase()}"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (canAfford) Color(0xFFFFB300) else Color(0xFF37474F),
@@ -432,12 +442,13 @@ private fun UpgradeCard(
                     contentColor = Color.Black,
                     disabledContentColor = Color(0xFF78909C)
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
             ) {
                 if (isMaxed) {
                     Text(
                         text = "COMPLETO",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 } else if (!isLevelUnlocked) {
@@ -445,13 +456,13 @@ private fun UpgradeCard(
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            modifier = Modifier.size(13.dp),
+                            modifier = Modifier.size(12.dp),
                             tint = Color(0xFF90A4AE)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "NIVEL ${item.requiredLevel} (${item.requiredLevel * 15} BAJAS)",
-                            fontSize = 10.sp,
+                            text = "REQ. NIVEL ${item.requiredLevel}",
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFB0BEC5)
                         )
@@ -461,13 +472,13 @@ private fun UpgradeCard(
                         Icon(
                             imageVector = Icons.Default.MonetizationOn,
                             contentDescription = null,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = if (item.currentLevel == 0) "INSTALAR (${item.nextCost})"
                                    else "MEJORAR (${item.nextCost})",
-                            fontSize = 11.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }

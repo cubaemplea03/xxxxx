@@ -2,6 +2,7 @@ package com.example.game.engine
 
 import com.example.game.audio.GameAudioEngine
 import com.example.game.model.Enemy
+import com.example.game.model.EnemyProjectile
 import com.example.game.model.EnemyState
 import com.example.game.model.EnemyType
 import com.example.game.model.FloatingText
@@ -27,7 +28,9 @@ class GameEngine(
     val audioEngine: GameAudioEngine,
     val onGameOver: (distance: Int, scrap: Int, gold: Int, kills: Int, survivalLevel: Int) -> Unit,
     val onLevelComplete: (level: Int, kills: Int, goldEarned: Int, scrapEarned: Int) -> Unit = { _, _, _, _ -> },
-    val onPlayerLevelUp: ((newLevel: Int) -> Unit)? = null
+    val onPlayerLevelUp: ((newLevel: Int) -> Unit)? = null,
+    val onGoldEarned: ((amount: Int) -> Unit)? = null,
+    var onMonsterSeen: ((EnemyType) -> Unit)? = null
 ) {
     var player = Player()
     val wagons = mutableListOf<Wagon>()
@@ -35,6 +38,7 @@ class GameEngine(
     val resources = mutableListOf<ResourceItem>()
     val projectiles = mutableListOf<Projectile>()
     val turretProjectiles = mutableListOf<TurretProjectile>()
+    val enemyProjectiles = mutableListOf<EnemyProjectile>()
     val slashEffects = mutableListOf<SlashEffect>()
     val particles = mutableListOf<Particle>()
     val floatingTexts = mutableListOf<FloatingText>()
@@ -55,7 +59,8 @@ class GameEngine(
     // Survival Mode state
     var selectedMapId = 1
     var currentLevel = 1
-    var playerSurvivalLevel = 0
+    var playerSurvivalLevel = 1
+    var lastBossSpawnedLevel = 0
     var levelPhase: LevelPhase = LevelPhase.ARRIVING
     var trainArrivalTimer = 2.8f
     var totalEnemiesTarget = 20
@@ -64,6 +69,8 @@ class GameEngine(
     var goldEarnedThisLevel = 0
     var scrapEarnedThisLevel = 0
     var trainWheelOffset = 0f
+
+    fun getActiveBoss(): Enemy? = enemies.firstOrNull { it.isBoss && it.state != EnemyState.DYING }
 
     private var spawnTimer = 0f
     private var weatherTimer = 0f
@@ -81,16 +88,25 @@ class GameEngine(
         trainWeapons.cannonLevel = stats.cannonLevel
         trainWeapons.armorLevel = stats.armorLevel
         trainWeapons.spotlightLevel = stats.spotlightLevel
+        player.gold = stats.totalGold
+        player.headSkin = stats.equippedHead
+        player.chestSkin = stats.equippedChest
+        player.legsSkin = stats.equippedLegs
     }
 
-    fun resetGame(mapId: Int = 1) {
+    fun resetGame(mapId: Int = 1, initialGold: Int = player.gold) {
+        val currentHead = player.headSkin
+        val currentChest = player.chestSkin
+        val currentLegs = player.legsSkin
+
         selectedMapId = mapId
         currentLevel = mapId
         levelPhase = LevelPhase.ARRIVING
         trainArrivalTimer = 2.8f
         enemiesSpawned = 0
         enemiesDefeated = 0
-        playerSurvivalLevel = 0
+        playerSurvivalLevel = 1
+        lastBossSpawnedLevel = 0
         goldEarnedThisLevel = 0
         scrapEarnedThisLevel = 0
 
@@ -100,15 +116,19 @@ class GameEngine(
             health = 100f,
             ammo = 18,
             scrap = player.scrap.coerceAtLeast(10),
-            gold = player.gold,
+            gold = initialGold,
             medkits = 1,
-            fuelCans = 1
+            fuelCans = 1,
+            headSkin = currentHead,
+            chestSkin = currentChest,
+            legsSkin = currentLegs
         )
         player.invulnerableTimer = 1.8f
         enemies.clear()
         resources.clear()
         projectiles.clear()
         turretProjectiles.clear()
+        enemyProjectiles.clear()
         slashEffects.clear()
         particles.clear()
         floatingTexts.clear()
@@ -199,7 +219,8 @@ class GameEngine(
                     levelPhase = LevelPhase.DEFENDING
                     spawnTimer = 1.2f
                     floatingTexts.add(FloatingText("¡TREN EN ${train.environmentType.uppercase()}!", player.x, 90f, 0xFFFFD54F))
-                    floatingTexts.add(FloatingText("MODO SUPERVIVENCIA: CADA 15 BAJAS SUBES DE NIVEL", player.x, 115f, 0xFFFF7043))
+                    floatingTexts.add(FloatingText("MODO SUPERVIVENCIA: CADA 10 BAJAS SUBES DE NIVEL", player.x, 115f, 0xFFFF7043))
+                    floatingTexts.add(FloatingText("☠️ ¡EN NIVEL 10 APARECE EL JEFE TITÁNICO! ☠️", player.x, 140f, 0xFFFF1744))
                 }
             }
             LevelPhase.DEFENDING -> {
@@ -228,6 +249,7 @@ class GameEngine(
         // 4. Projectiles & Slash effects
         updateProjectiles(clampedDt)
         updateTurretProjectiles(clampedDt)
+        updateEnemyProjectiles(clampedDt)
 
         // 5. Enemies update
         updateEnemies(clampedDt)
@@ -244,16 +266,61 @@ class GameEngine(
     }
 
     private fun updateEnemySpawning(dt: Float) {
+        // Boss spawn check: Every 10 levels (10, 20, 30...)
+        if (playerSurvivalLevel >= 10 && playerSurvivalLevel % 10 == 0 && lastBossSpawnedLevel != playerSurvivalLevel && getActiveBoss() == null) {
+            lastBossSpawnedLevel = playerSurvivalLevel
+            spawnBoss(playerSurvivalLevel / 10)
+        }
+
         spawnTimer -= dt
-        val maxAliveOnScreen = if (graphicQuality == "BAJA") 3 else (4 + playerSurvivalLevel.coerceAtMost(3))
+        val maxAliveOnScreen = if (graphicQuality == "BAJA") 3 else (4 + (playerSurvivalLevel / 2).coerceAtMost(4))
 
         if (spawnTimer <= 0f && enemies.size < maxAliveOnScreen) {
             spawnEnemy()
             enemiesSpawned++
-            // Spawn interval: steady, accelerates slightly as survival level increases
-            val baseDelay = (2.2f - playerSurvivalLevel * 0.15f).coerceAtLeast(1.1f)
-            spawnTimer = Random.nextFloat() * 0.8f + baseDelay
+            // Spawn interval: accelerates smoothly as survival level increases
+            val baseDelay = (2.2f - (playerSurvivalLevel - 1) * 0.12f).coerceAtLeast(0.95f)
+            spawnTimer = Random.nextFloat() * 0.7f + baseDelay
         }
+    }
+
+    fun spawnBoss(tier: Int = 1) {
+        val bossName = when (tier) {
+            1 -> "COLOSO CARMESÍ"
+            2 -> "TITÁN NUCLEAR"
+            3 -> "DEVORADOR ABISAL"
+            else -> "LEVIATÁN DEL PÁRAMO (TIER $tier)"
+        }
+
+        val spawnLeft = Random.nextBoolean()
+        val spawnX = if (spawnLeft) (player.x - 360f).coerceAtLeast(60f) else (player.x + 360f).coerceAtMost(1420f)
+        val spawnY = 220f
+
+        // Boss scales exponentially with tier!
+        val baseHp = 450f
+        val bossHp = baseHp * (1f + (tier - 1) * 0.70f)
+        val bossDamage = 32f * (1f + (tier - 1) * 0.25f)
+
+        val boss = Enemy(
+            id = enemyIdCounter++,
+            type = EnemyType.JEFE,
+            x = spawnX,
+            y = spawnY,
+            health = bossHp,
+            maxHealth = bossHp,
+            isBoss = true,
+            bossTier = tier,
+            bossName = bossName,
+            shootCooldown = 2.2f,
+            state = EnemyState.CHASING
+        )
+        enemies.add(boss)
+        onMonsterSeen?.invoke(EnemyType.JEFE)
+
+        audioEngine.playBossRoar()
+        floatingTexts.add(FloatingText("☠️ ¡ALERTA: HA APARECIDO EL $bossName (NIVEL ${tier * 10})! ☠️", player.x, 70f, 0xFFFF1744, life = 3.0f))
+        floatingTexts.add(FloatingText("¡DISPARA PROYECTILES DEVASTADORES! ¡EQUÍPATE Y ESQUIVA!", player.x, 95f, 0xFFFF7043, life = 3.0f))
+        spawnImpactParticles(spawnX, spawnY - 30f, 0xFFFF1744, count = 30)
     }
 
     private fun updateTrainWeapons(dt: Float) {
@@ -529,11 +596,122 @@ class GameEngine(
                 // Spotlight slowing effect
                 val speedMod = if (trainWeapons.spotlightLevel > 0 && abs(enemy.x - 1350f) < 400f) 0.75f else 1.0f
 
-                when (enemy.type) {
-                    EnemyType.ERRANTE -> {
+                // Level speed multiplier: higher level monsters move faster!
+                val lvlMult = (playerSurvivalLevel - 1).coerceAtLeast(0)
+                val levelSpeedBoost = (1f + lvlMult * 0.035f).coerceAtMost(1.5f)
+
+                when {
+                    enemy.isBoss -> {
+                        // Boss AI: deliberate steady march towards player + ranged firing
+                        val dir = if (enemy.facingRight) 1f else -1f
+                        val bossSpeed = (enemy.type.speed + (enemy.bossTier * 3.5f)) * speedMod
+                        if (distToPlayer > 55f) {
+                            enemy.vx = dir * bossSpeed
+                            enemy.x += enemy.vx * dt
+                            enemy.state = EnemyState.CHASING
+                            enemy.animFrame += dt * 4.5f
+                        } else {
+                            enemy.vx = 0f
+                            if (enemy.attackCooldown <= 0f) {
+                                enemyAttack(enemy)
+                            }
+                        }
+
+                        // Boss Shooting Mechanic!
+                        enemy.shootCooldown -= dt
+                        if (enemy.shootCooldown in 0.01f..0.5f) {
+                            // Charging particles around shoulder cannon
+                            val cannonX = enemy.x + (if (enemy.facingRight) 22f else -22f)
+                            val cannonY = enemy.y - 48f
+                            spawnImpactParticles(cannonX, cannonY, 0xFFFF1744, count = 1)
+                        }
+
+                        if (enemy.shootCooldown <= 0f) {
+                            val fireInterval = (2.4f - enemy.bossTier * 0.25f).coerceAtLeast(1.1f)
+                            enemy.shootCooldown = fireInterval
+
+                            val cannonX = enemy.x + (if (enemy.facingRight) 24f else -24f)
+                            val cannonY = enemy.y - 48f
+                            val targetY = player.y - 18f
+                            val dx = player.x - cannonX
+                            val dy = targetY - cannonY
+                            val baseAngle = atan2(dy, dx)
+                            val projSpeed = 330f + enemy.bossTier * 30f
+                            val baseDmg = 18f + enemy.bossTier * 7f
+
+                            audioEngine.playBossShoot()
+                            spawnImpactParticles(cannonX, cannonY, 0xFFFF5722, count = 10)
+
+                            when (enemy.bossTier) {
+                                1 -> {
+                                    // Single focused energy blast
+                                    enemyProjectiles.add(
+                                        EnemyProjectile(
+                                            x = cannonX,
+                                            y = cannonY,
+                                            vx = cos(baseAngle) * projSpeed,
+                                            vy = sin(baseAngle) * projSpeed,
+                                            damage = baseDmg,
+                                            color = 0xFFFF1744,
+                                            radius = 8f
+                                        )
+                                    )
+                                }
+                                2 -> {
+                                    // Double burst spread
+                                    listOf(-0.16f, 0.16f).forEach { spread ->
+                                        val a = baseAngle + spread
+                                        enemyProjectiles.add(
+                                            EnemyProjectile(
+                                                x = cannonX,
+                                                y = cannonY,
+                                                vx = cos(a) * projSpeed,
+                                                vy = sin(a) * projSpeed,
+                                                damage = baseDmg,
+                                                color = 0xFFFF5722,
+                                                radius = 7.5f
+                                            )
+                                        )
+                                    }
+                                }
+                                else -> {
+                                    // Triple barrage in tier 3+!
+                                    listOf(-0.24f, 0f, 0.24f).forEach { spread ->
+                                        val a = baseAngle + spread
+                                        enemyProjectiles.add(
+                                            EnemyProjectile(
+                                                x = cannonX,
+                                                y = cannonY,
+                                                vx = cos(a) * (projSpeed * (if (spread == 0f) 1.15f else 1.0f)),
+                                                vy = sin(a) * (projSpeed * (if (spread == 0f) 1.15f else 1.0f)),
+                                                damage = baseDmg,
+                                                color = 0xFFD500F9,
+                                                radius = 8.5f
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    enemy.type == EnemyType.BRUTO -> {
+                        val dir = if (enemy.facingRight) 1f else -1f
+                        if (distToPlayer > 40f) {
+                            enemy.vx = dir * enemy.type.speed * speedMod * levelSpeedBoost
+                            enemy.x += enemy.vx * dt
+                            enemy.state = EnemyState.CHASING
+                            enemy.animFrame += dt * 4f
+                        } else {
+                            enemy.vx = 0f
+                            if (enemy.attackCooldown <= 0f) {
+                                enemyAttack(enemy)
+                            }
+                        }
+                    }
+                    enemy.type == EnemyType.ERRANTE -> {
                         val dir = if (enemy.facingRight) 1f else -1f
                         if (distToPlayer > 28f) {
-                            enemy.vx = dir * enemy.type.speed * speedMod
+                            enemy.vx = dir * enemy.type.speed * speedMod * levelSpeedBoost
                             enemy.x += enemy.vx * dt
                             enemy.state = EnemyState.CHASING
                             enemy.animFrame += dt * 5f
@@ -544,10 +722,10 @@ class GameEngine(
                             }
                         }
                     }
-                    EnemyType.CORREDOR -> {
+                    enemy.type == EnemyType.CORREDOR -> {
                         val dir = if (enemy.facingRight) 1f else -1f
                         if (distToPlayer > 36f) {
-                            enemy.vx = dir * enemy.type.speed * speedMod
+                            enemy.vx = dir * enemy.type.speed * speedMod * levelSpeedBoost
                             enemy.x += enemy.vx * dt
                             enemy.state = EnemyState.CHASING
                             enemy.animFrame += dt * 9f
@@ -558,9 +736,9 @@ class GameEngine(
                             }
                         }
                     }
-                    EnemyType.TREPADOR -> {
+                    enemy.type == EnemyType.TREPADOR -> {
                         if (enemy.isClimbing) {
-                            enemy.y -= 75f * dt
+                            enemy.y -= 75f * dt * levelSpeedBoost
                             if (enemy.y <= 165f) {
                                 enemy.y = 165f
                                 enemy.isClimbing = false
@@ -569,7 +747,7 @@ class GameEngine(
                         } else {
                             val dir = if (enemy.facingRight) 1f else -1f
                             if (distToPlayer > 30f) {
-                                enemy.vx = dir * enemy.type.speed * speedMod
+                                enemy.vx = dir * enemy.type.speed * speedMod * levelSpeedBoost
                                 enemy.x += enemy.vx * dt
                                 enemy.state = EnemyState.CHASING
                                 enemy.animFrame += dt * 7f
@@ -603,10 +781,31 @@ class GameEngine(
     }
 
     private fun spawnEnemy() {
-        val type = when (Random.nextInt(100)) {
-            in 0..45 -> EnemyType.ERRANTE
-            in 46..75 -> EnemyType.CORREDOR
-            else -> EnemyType.TREPADOR
+        val lvl = playerSurvivalLevel
+        val type = when {
+            lvl >= 5 -> {
+                when (Random.nextInt(100)) {
+                    in 0..25 -> EnemyType.ERRANTE
+                    in 26..50 -> EnemyType.CORREDOR
+                    in 51..70 -> EnemyType.TREPADOR
+                    else -> EnemyType.BRUTO // Armored Brute 30%
+                }
+            }
+            lvl >= 3 -> {
+                when (Random.nextInt(100)) {
+                    in 0..35 -> EnemyType.ERRANTE
+                    in 36..65 -> EnemyType.CORREDOR
+                    in 66..85 -> EnemyType.TREPADOR
+                    else -> EnemyType.BRUTO // Armored Brute 15%
+                }
+            }
+            else -> {
+                when (Random.nextInt(100)) {
+                    in 0..45 -> EnemyType.ERRANTE
+                    in 46..75 -> EnemyType.CORREDOR
+                    else -> EnemyType.TREPADOR
+                }
+            }
         }
 
         // Spawn on left or right flanks of the train
@@ -620,30 +819,85 @@ class GameEngine(
         val isClimber = (type == EnemyType.TREPADOR)
         val spawnY = if (isClimber) 260f else 160f
 
+        // Stats scale directly with survival level:
+        // "mientras mas alto sea el nivel de supervivencia del usuario mas fuerte sean los moustros"
+        val lvlMult = (playerSurvivalLevel - 1).coerceAtLeast(0)
+        val scaledHp = type.maxHp * (1f + lvlMult * 0.18f)
+
         val enemy = Enemy(
             id = enemyIdCounter++,
             type = type,
             x = spawnX,
             y = spawnY,
-            health = type.maxHp,
+            health = scaledHp,
+            maxHealth = scaledHp,
             isClimbing = isClimber,
             state = if (isClimber) EnemyState.SPAWNING else EnemyState.CHASING
         )
         enemies.add(enemy)
+        onMonsterSeen?.invoke(type)
     }
 
     private fun enemyAttack(enemy: Enemy) {
         enemy.state = EnemyState.ATTACKING
         enemy.attackCooldown = 1.2f
-        val hitDistance = 35f
-        if (abs(player.x - enemy.x) <= hitDistance && abs(player.y - enemy.y) <= 25f) {
-            var dmg = enemy.type.damage
+        val hitDistance = if (enemy.isBoss) 60f else (if (enemy.type == EnemyType.BRUTO) 45f else 35f)
+        if (abs(player.x - enemy.x) <= hitDistance && abs(player.y - enemy.y) <= 35f) {
+            val lvlMult = (playerSurvivalLevel - 1).coerceAtLeast(0)
+            val baseDmg = if (enemy.isBoss) 32f * (1f + (enemy.bossTier - 1) * 0.35f) else enemy.type.damage
+            var dmg = baseDmg * (1f + lvlMult * 0.12f)
+
             // Armor damage reduction
             if (trainWeapons.armorLevel > 0) {
                 val reduction = trainWeapons.armorLevel * 0.12f // up to 36% reduction
                 dmg *= (1.0f - reduction)
             }
             damagePlayer(dmg)
+        }
+    }
+
+    private fun updateEnemyProjectiles(dt: Float) {
+        val it = enemyProjectiles.iterator()
+        while (it.hasNext()) {
+            val p = it.next()
+            p.x += p.vx * dt
+            p.y += p.vy * dt
+            p.life -= dt
+
+            // Particle trail
+            if (Random.nextInt(3) == 0) {
+                particles.add(
+                    Particle(
+                        x = p.x,
+                        y = p.y,
+                        vx = -p.vx * 0.08f + Random.nextFloat() * 20f - 10f,
+                        vy = -p.vy * 0.08f + Random.nextFloat() * 20f - 10f,
+                        alpha = 0.85f,
+                        size = 3.5f,
+                        color = p.color,
+                        life = 0.25f,
+                        maxLife = 0.25f
+                    )
+                )
+            }
+
+            var hit = false
+            // Check collision with player
+            if (!player.isDead && abs(p.x - player.x) < 24f && abs(p.y - (player.y - 20f)) < 26f) {
+                hit = true
+                var dmg = p.damage
+                if (trainWeapons.armorLevel > 0) {
+                    val reduction = trainWeapons.armorLevel * 0.12f
+                    dmg *= (1.0f - reduction)
+                }
+                damagePlayer(dmg)
+                spawnImpactParticles(p.x, p.y, p.color, count = 12)
+                floatingTexts.add(FloatingText("-${dmg.toInt()} ¡DISPARO!", player.x, player.y - 35f, 0xFFFF1744))
+            }
+
+            if (hit || p.life <= 0f || p.x < 10f || p.x > 1490f) {
+                it.remove()
+            }
         }
     }
 
@@ -779,10 +1033,51 @@ class GameEngine(
             enemiesDefeated++
             audioEngine.playEnemyDeath()
 
-            // Survival Level Up: every 15 kills (15 -> Nivel 1, 30 -> Nivel 2, etc.)
-            val newLevel = enemiesDefeated / 15
-            if (newLevel > playerSurvivalLevel) {
-                playerSurvivalLevel = newLevel
+            if (enemy.isBoss) {
+                // EPIC BOSS DEFEAT!
+                audioEngine.playBossDefeated()
+                val bossGold = 250 + enemy.bossTier * 150
+                player.gold += bossGold
+                player.scrap += 35
+                goldEarnedThisLevel += bossGold
+                scrapEarnedThisLevel += 35
+                onGoldEarned?.invoke(bossGold)
+
+                floatingTexts.add(FloatingText("☠️ ¡${enemy.bossName} DERROTADO! ☠️", player.x, 70f, 0xFFFFD700, life = 3.2f))
+                floatingTexts.add(FloatingText("+$bossGold ORO  •  +35 CHATARRA", player.x, 95f, 0xFF76FF03, life = 3.2f))
+                floatingTexts.add(FloatingText("+1 BOTIQUÍN  +1 COMBUSTIBLE  +15 BALAS", player.x, 120f, 0xFF40C4FF, life = 3.2f))
+                player.medkits++
+                player.fuelCans++
+                player.ammo = (player.ammo + 15).coerceAtMost(45)
+                spawnImpactParticles(enemy.x, enemy.y - 30f, 0xFFFFD700, count = 35)
+                spawnImpactParticles(enemy.x, enemy.y - 30f, 0xFFFF5722, count = 25)
+
+                // Extra loot drop
+                resources.add(ResourceItem(id = resourceIdCounter++, type = ResourceType.ORO, x = enemy.x - 20f, y = enemy.y - 12f))
+                resources.add(ResourceItem(id = resourceIdCounter++, type = ResourceType.ORO, x = enemy.x + 20f, y = enemy.y - 12f))
+                resources.add(ResourceItem(id = resourceIdCounter++, type = ResourceType.MEDICINA, x = enemy.x, y = enemy.y - 12f))
+            } else {
+                // Defeated normal enemy awards gold directly!
+                val goldGained = Random.nextInt(8, 16)
+                player.gold += goldGained
+                goldEarnedThisLevel += goldGained
+                audioEngine.playGoldPickup()
+                floatingTexts.add(FloatingText("+$goldGained ORO", enemy.x, enemy.y - 42f, 0xFFFFD700))
+                onGoldEarned?.invoke(goldGained)
+
+                // Drop scrap, ammo, or extra gold coin on ground
+                val dropType = when (Random.nextInt(100)) {
+                    in 0..45 -> ResourceType.CHATARRA
+                    in 46..75 -> ResourceType.MUNICION
+                    else -> ResourceType.ORO
+                }
+                resources.add(ResourceItem(id = resourceIdCounter++, type = dropType, x = enemy.x, y = enemy.y - 8f))
+            }
+
+            // Survival Level Up: every 10 kills (10 -> Nivel 2, ..., 90 -> Nivel 10 ¡JEFE!)
+            val targetLevel = 1 + (enemiesDefeated / 10)
+            if (targetLevel > playerSurvivalLevel) {
+                playerSurvivalLevel = targetLevel
                 audioEngine.playLevelVictory()
                 floatingTexts.add(FloatingText("★ ¡SUBIDA DE NIVEL! NIVEL $playerSurvivalLevel ★", player.x, 70f, 0xFFFFD700))
                 floatingTexts.add(FloatingText("+75 ORO  •  ¡MEJORAS DESBLOQUEADAS!", player.x, 95f, 0xFF76FF03))
@@ -793,22 +1088,14 @@ class GameEngine(
                 goldEarnedThisLevel += 75
                 spawnImpactParticles(player.x, player.y - 20f, 0xFFFFD700, count = 22)
                 onPlayerLevelUp?.invoke(playerSurvivalLevel)
-            }
+                onGoldEarned?.invoke(75)
 
-            // Defeated enemy awards gold directly!
-            val goldGained = Random.nextInt(8, 16)
-            player.gold += goldGained
-            goldEarnedThisLevel += goldGained
-            audioEngine.playGoldPickup()
-            floatingTexts.add(FloatingText("+$goldGained ORO", enemy.x, enemy.y - 42f, 0xFFFFD700))
-
-            // Drop scrap, ammo, or extra gold coin on ground
-            val dropType = when (Random.nextInt(100)) {
-                in 0..45 -> ResourceType.CHATARRA
-                in 46..75 -> ResourceType.MUNICION
-                else -> ResourceType.ORO
+                // Boss spawn check! Every 10 levels (10, 20, 30...)
+                if (playerSurvivalLevel % 10 == 0 && lastBossSpawnedLevel != playerSurvivalLevel) {
+                    lastBossSpawnedLevel = playerSurvivalLevel
+                    spawnBoss(tier = playerSurvivalLevel / 10)
+                }
             }
-            resources.add(ResourceItem(id = resourceIdCounter++, type = dropType, x = enemy.x, y = enemy.y - 8f))
             spawnImpactParticles(enemy.x, enemy.y - 15f, 0xFF78909C, count = 12)
         }
     }
@@ -858,6 +1145,7 @@ class GameEngine(
                         goldEarnedThisLevel += amount
                         audioEngine.playGoldPickup()
                         floatingTexts.add(FloatingText("+$amount Oro", r.x, r.y - 20f, 0xFFFFD700))
+                        onGoldEarned?.invoke(amount)
                     }
                     ResourceType.CHATARRA -> {
                         val amount = Random.nextInt(5, 12)

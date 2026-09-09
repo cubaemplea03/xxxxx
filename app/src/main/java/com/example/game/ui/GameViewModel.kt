@@ -76,8 +76,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 repository.savePlayerLevel(newLevel)
             }
+        },
+        onGoldEarned = { amount ->
+            viewModelScope.launch {
+                repository.addGold(amount)
+            }
+        },
+        onMonsterSeen = { enemyType ->
+            viewModelScope.launch {
+                repository.markMonsterSeen(enemyType.name)
+            }
         }
     )
+
+    var previousScreenBeforeUpgrades: GameScreen = GameScreen.MAIN_MENU
+        private set
+    var previousScreenForSettings: GameScreen = GameScreen.MAIN_MENU
+        private set
 
     init {
         viewModelScope.launch {
@@ -104,11 +119,64 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         audioEngine.startAmbientMusic()
     }
 
+    fun openUpgradesFrom(origin: GameScreen) {
+        previousScreenBeforeUpgrades = origin
+        viewModelScope.launch {
+            repository.savePlayerLevel(engine.playerSurvivalLevel)
+        }
+        audioEngine.playButtonClick()
+        _screen.value = GameScreen.UPGRADES
+        resetInputs()
+    }
+
+    fun closeUpgrades() {
+        audioEngine.playButtonClick()
+        if (previousScreenBeforeUpgrades == GameScreen.GAMEPLAY) {
+            _screen.value = GameScreen.GAMEPLAY
+            _isPaused.value = true
+            engine.isPaused = true
+            resetInputs()
+        } else {
+            _screen.value = GameScreen.MAIN_MENU
+            resetInputs()
+        }
+    }
+
+    fun openSettingsFrom(origin: GameScreen) {
+        previousScreenForSettings = origin
+        audioEngine.playButtonClick()
+        _screen.value = GameScreen.SETTINGS
+        resetInputs()
+    }
+
+    fun closeSettings() {
+        audioEngine.playButtonClick()
+        if (previousScreenForSettings == GameScreen.GAMEPLAY) {
+            _screen.value = GameScreen.GAMEPLAY
+            _isPaused.value = true
+            engine.isPaused = true
+            resetInputs()
+        } else {
+            _screen.value = GameScreen.MAIN_MENU
+            resetInputs()
+        }
+    }
+
     fun navigateTo(newScreen: GameScreen) {
         audioEngine.playButtonClick()
+        if (newScreen == GameScreen.UPGRADES) {
+            previousScreenBeforeUpgrades = _screen.value
+            viewModelScope.launch {
+                repository.savePlayerLevel(engine.playerSurvivalLevel)
+            }
+        } else if (newScreen == GameScreen.SETTINGS) {
+            previousScreenForSettings = _screen.value
+        }
         _screen.value = newScreen
         if (newScreen == GameScreen.GAMEPLAY) {
-            startGame()
+            if (_isGameOver.value) {
+                startGame()
+            }
         } else {
             resetInputs()
         }
@@ -126,7 +194,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         resetInputs()
         engine.applyUpgrades(_stats.value)
         val finalMap = if (mapId <= 0) (1..3).random() else mapId
-        engine.resetGame(finalMap)
+        engine.resetGame(finalMap, initialGold = _stats.value.totalGold)
         renderTick.longValue = 0L
         hudTick.longValue = 0L
     }
@@ -292,6 +360,42 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             repository.saveSettings(s)
+        }
+    }
+
+    fun purchaseSkin(skin: com.example.game.model.WardrobeSkinItem, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val success = repository.purchaseSkin(
+                skinId = skin.id,
+                cost = skin.costGold,
+                slotName = skin.slot.name
+            )
+            if (success) {
+                audioEngine.playGoldPickup()
+                when (skin.slot) {
+                    com.example.game.model.WardrobeSlot.CABEZA -> engine.player.headSkin = skin.id
+                    com.example.game.model.WardrobeSlot.PECHO -> engine.player.chestSkin = skin.id
+                    com.example.game.model.WardrobeSlot.PIERNAS -> engine.player.legsSkin = skin.id
+                }
+            } else {
+                audioEngine.playButtonClick()
+            }
+            onResult(success)
+        }
+    }
+
+    fun equipSkin(skin: com.example.game.model.WardrobeSkinItem) {
+        viewModelScope.launch {
+            repository.equipSkin(
+                skinId = skin.id,
+                slotName = skin.slot.name
+            )
+            audioEngine.playButtonClick()
+            when (skin.slot) {
+                com.example.game.model.WardrobeSlot.CABEZA -> engine.player.headSkin = skin.id
+                com.example.game.model.WardrobeSlot.PECHO -> engine.player.chestSkin = skin.id
+                com.example.game.model.WardrobeSlot.PIERNAS -> engine.player.legsSkin = skin.id
+            }
         }
     }
 

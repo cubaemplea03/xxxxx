@@ -508,6 +508,85 @@ class GameAudioEngine(private val context: Context) {
         }
     }
 
+    /**
+     * Heavy, monstrous roar announcing the arrival of the Titan Boss
+     */
+    fun playBossRoar() {
+        if (!sfxEnabled) return
+        vibrate(250)
+        scope.launch {
+            val durationMs = 800
+            val numSamples = (sampleRate * (durationMs / 1000f)).toInt()
+            val buffer = ShortArray(numSamples)
+            val vol = (sfxVolume * 0.95f).coerceIn(0f, 1f)
+
+            for (i in 0 until numSamples) {
+                val progress = i.toFloat() / numSamples
+                val t = i.toFloat() / sampleRate
+                val freq = 85.0 - progress * 45.0 // Sub-rumble pitch drop
+                val growlMod = sin(2.0 * Math.PI * 18.0 * t.toDouble()) // low flutter
+                val dist = (sin(2.0 * Math.PI * freq * t.toDouble() + growlMod).toFloat() * 0.7f).coerceIn(-0.6f, 0.6f)
+                val noise = (Random.nextFloat() * 2f - 1f) * 0.35f
+                val env = sin(progress.toDouble() * Math.PI).toFloat()
+                val sampleVal = (dist + noise) * env * Short.MAX_VALUE * vol
+                buffer[i] = sampleVal.toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            sfxQueue.offer(buffer)
+        }
+    }
+
+    /**
+     * Deep plasma blast sound when the Boss shoots
+     */
+    fun playBossShoot() {
+        if (!sfxEnabled) return
+        vibrate(90)
+        scope.launch {
+            val durationMs = 320
+            val numSamples = (sampleRate * (durationMs / 1000f)).toInt()
+            val buffer = ShortArray(numSamples)
+            val vol = (sfxVolume * 0.9f).coerceIn(0f, 1f)
+
+            for (i in 0 until numSamples) {
+                val progress = i.toFloat() / numSamples
+                val t = i.toFloat() / sampleRate
+                val freq = 260f - progress * 190f
+                val plasmaHum = sin(2.0 * Math.PI * 45f * t)
+                val tone = sin(2.0 * Math.PI * (freq + plasmaHum * 30f) * t).toFloat()
+                val env = (1.0f - progress * progress)
+                val sampleVal = tone * env * Short.MAX_VALUE * vol
+                buffer[i] = sampleVal.toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            sfxQueue.offer(buffer)
+        }
+    }
+
+    /**
+     * Dramatic orchestral/chime chord when the Titan Boss is destroyed
+     */
+    fun playBossDefeated() {
+        if (!sfxEnabled) return
+        vibrate(300)
+        scope.launch {
+            val notes = listOf(220f, 277f, 330f, 440f, 554f) // Epic A major chord fanfare
+            for (freq in notes) {
+                val durationMs = 280
+                val numSamples = (sampleRate * (durationMs / 1000f)).toInt()
+                val buffer = ShortArray(numSamples)
+                val vol = (sfxVolume * 0.75f).coerceIn(0f, 1f)
+
+                for (i in 0 until numSamples) {
+                    val progress = i.toFloat() / numSamples
+                    val t = i.toFloat() / sampleRate
+                    val sampleVal = sin(2.0 * Math.PI * freq * t) * (1.0f - progress) * Short.MAX_VALUE * vol
+                    buffer[i] = sampleVal.toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                }
+                sfxQueue.offer(buffer)
+                delay(80)
+            }
+        }
+    }
+
     private fun vibrate(durationMs: Long) {
         if (!vibrationEnabled) return
         try {

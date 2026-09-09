@@ -42,17 +42,23 @@ fun MainGameApp(
                 GameScreen.MAIN_MENU -> {
                     MainMenuScreen(
                         stats = stats,
-                        onPlayClick = {
-                            viewModel.navigateTo(GameScreen.GAMEPLAY)
+                        onPlayClick = { mapId ->
+                            viewModel.startSurvivalGame(mapId)
                         },
                         onUpgradesClick = {
-                            viewModel.navigateTo(GameScreen.UPGRADES)
+                            viewModel.openUpgradesFrom(GameScreen.MAIN_MENU)
                         },
                         onSettingsClick = {
-                            viewModel.navigateTo(GameScreen.SETTINGS)
+                            viewModel.openSettingsFrom(GameScreen.MAIN_MENU)
                         },
                         onCreditsClick = {
                             viewModel.navigateTo(GameScreen.CREDITS)
+                        },
+                        onGuideClick = {
+                            viewModel.navigateTo(GameScreen.MONSTER_GUIDE)
+                        },
+                        onWardrobeClick = {
+                            viewModel.navigateTo(GameScreen.WARDROBE)
                         }
                     )
                 }
@@ -63,7 +69,7 @@ fun MainGameApp(
                     TrainUpgradesScreen(
                         viewModel = viewModel,
                         onBack = {
-                            viewModel.navigateTo(GameScreen.MAIN_MENU)
+                            viewModel.closeUpgrades()
                         }
                     )
                 }
@@ -79,12 +85,28 @@ fun MainGameApp(
                         onControlSizeChange = { viewModel.updateControlSize(it) },
                         onControlOpacityChange = { viewModel.updateControlOpacity(it) },
                         onBackClick = {
-                            viewModel.navigateTo(GameScreen.MAIN_MENU)
+                            viewModel.closeSettings()
                         }
                     )
                 }
                 GameScreen.CREDITS -> {
                     CreditsScreen(
+                        onBackClick = {
+                            viewModel.navigateTo(GameScreen.MAIN_MENU)
+                        }
+                    )
+                }
+                GameScreen.MONSTER_GUIDE -> {
+                    MonsterGuideScreen(
+                        stats = stats,
+                        onBackClick = {
+                            viewModel.navigateTo(GameScreen.MAIN_MENU)
+                        }
+                    )
+                }
+                GameScreen.WARDROBE -> {
+                    WardrobeScreen(
+                        viewModel = viewModel,
                         onBackClick = {
                             viewModel.navigateTo(GameScreen.MAIN_MENU)
                         }

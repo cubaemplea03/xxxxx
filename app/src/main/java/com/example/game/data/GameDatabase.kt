@@ -24,8 +24,42 @@ data class GameStatsEntity(
     val turretLevel: Int = 0,     // 0 = none, 1..3
     val cannonLevel: Int = 0,     // 0 = none, 1..3
     val armorLevel: Int = 0,      // 0 = none, 1..3
-    val spotlightLevel: Int = 0   // 0 = none, 1..3
-)
+    val spotlightLevel: Int = 0,   // 0 = none, 1..3
+    val discoveredMonsters: String = "ERRANTE", // Comma-separated list of discovered EnemyType names
+    // Player wardrobe & cosmetics
+    val equippedHead: String = "HEAD_DEFAULT",
+    val equippedChest: String = "CHEST_DEFAULT",
+    val equippedLegs: String = "LEGS_DEFAULT",
+    val ownedSkins: String = "HEAD_DEFAULT,CHEST_DEFAULT,LEGS_DEFAULT"
+) {
+    fun isSkinOwned(skinId: String): Boolean {
+        if (skinId.endsWith("_DEFAULT")) return true
+        val list = ownedSkins.split(",").map { it.trim().uppercase() }
+        return list.contains(skinId.trim().uppercase())
+    }
+
+    fun isSkinEquipped(skinId: String): Boolean {
+        val norm = skinId.trim().uppercase()
+        return equippedHead.uppercase() == norm ||
+               equippedChest.uppercase() == norm ||
+               equippedLegs.uppercase() == norm
+    }
+
+    fun hasSeenMonster(typeName: String): Boolean {
+        val list = discoveredMonsters.split(",").map { it.trim().uppercase() }
+        if (list.contains(typeName.uppercase())) return true
+
+        // Fallback progress check based on highest survival level or kills reached
+        return when (typeName.uppercase()) {
+            "ERRANTE" -> true
+            "CORREDOR" -> highestLevel >= 1 && totalKills >= 3
+            "TREPADOR" -> highestLevel >= 2 || totalKills >= 12
+            "BRUTO" -> highestLevel >= 3 || totalKills >= 25
+            "JEFE" -> highestLevel >= 10 || totalKills >= 90
+            else -> false
+        }
+    }
+}
 
 @Entity(tableName = "game_settings")
 data class GameSettingsEntity(
@@ -57,7 +91,7 @@ interface GameDao {
 
 @Database(
     entities = [GameStatsEntity::class, GameSettingsEntity::class],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 abstract class GameDatabase : RoomDatabase() {

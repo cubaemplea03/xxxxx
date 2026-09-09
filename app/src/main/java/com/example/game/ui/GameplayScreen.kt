@@ -153,8 +153,8 @@ fun GameplayScreen(
             PauseDialog(
                 distance = viewModel.engine.train.distance.toInt(),
                 onResume = { viewModel.resumeGame() },
-                onSettings = { viewModel.navigateTo(GameScreen.SETTINGS) },
-                onUpgrades = { viewModel.navigateTo(GameScreen.UPGRADES) },
+                onSettings = { viewModel.openSettingsFrom(GameScreen.GAMEPLAY) },
+                onUpgrades = { viewModel.openUpgradesFrom(GameScreen.GAMEPLAY) },
                 onMainMenu = { viewModel.navigateTo(GameScreen.MAIN_MENU) }
             )
         }
@@ -168,7 +168,7 @@ fun GameplayScreen(
                 kills = lastKills,
                 level = lastLevel,
                 onRetry = { viewModel.retryGame() },
-                onUpgrades = { viewModel.navigateTo(GameScreen.UPGRADES) },
+                onUpgrades = { viewModel.openUpgradesFrom(GameScreen.MAIN_MENU) },
                 onMainMenu = { viewModel.navigateTo(GameScreen.MAIN_MENU) }
             )
         }
@@ -181,7 +181,7 @@ fun GameplayScreen(
                 scrapEarned = levelEarnedScrap,
                 targetEnemies = viewModel.engine.totalEnemiesTarget,
                 onNextLevel = { viewModel.nextLevel() },
-                onUpgrades = { viewModel.navigateTo(GameScreen.UPGRADES) },
+                onUpgrades = { viewModel.openUpgradesFrom(GameScreen.GAMEPLAY) },
                 onMainMenu = { viewModel.navigateTo(GameScreen.MAIN_MENU) }
             )
         }

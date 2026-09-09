@@ -34,7 +34,6 @@ class GameRepository(context: Context) {
         val updated = current.copy(
             highScoreDistance = maxOf(current.highScoreDistance, distance),
             totalScrap = current.totalScrap + scrapGained,
-            totalGold = current.totalGold + goldGained,
             totalKills = current.totalKills + kills,
             gamesPlayed = current.gamesPlayed + 1,
             lastDistance = distance,
@@ -43,10 +42,31 @@ class GameRepository(context: Context) {
         dao.saveStats(updated)
     }
 
+    suspend fun addGold(amount: Int) {
+        if (amount <= 0) return
+        val current = dao.getStats().firstOrNull() ?: GameStatsEntity()
+        dao.saveStats(current.copy(totalGold = current.totalGold + amount))
+    }
+
     suspend fun savePlayerLevel(level: Int) {
         val current = dao.getStats().firstOrNull() ?: GameStatsEntity()
         if (level > current.highestLevel) {
             dao.saveStats(current.copy(highestLevel = level))
+        }
+    }
+
+    suspend fun markMonsterSeen(typeName: String) {
+        val current = dao.getStats().firstOrNull() ?: GameStatsEntity()
+        val currentSet = current.discoveredMonsters.split(",")
+            .map { it.trim().uppercase() }
+            .filter { it.isNotEmpty() }
+            .toMutableSet()
+        
+        val normalized = typeName.trim().uppercase()
+        if (!currentSet.contains(normalized)) {
+            currentSet.add(normalized)
+            val updatedString = currentSet.joinToString(",")
+            dao.saveStats(current.copy(discoveredMonsters = updatedString))
         }
     }
 
@@ -76,4 +96,46 @@ class GameRepository(context: Context) {
         dao.saveStats(updated)
         return true
     }
+
+    suspend fun purchaseSkin(skinId: String, cost: Int, slotName: String): Boolean {
+        val current = dao.getStats().firstOrNull() ?: GameStatsEntity()
+        val normalizedId = skinId.trim().uppercase()
+        val owned = current.ownedSkins.split(",")
+            .map { it.trim().uppercase() }
+            .filter { it.isNotEmpty() }
+            .toMutableSet()
+
+        if (owned.contains(normalizedId)) {
+            equipSkin(normalizedId, slotName)
+            return true
+        }
+
+        if (current.totalGold < cost) return false
+
+        owned.add(normalizedId)
+        val newGold = current.totalGold - cost
+        val newOwnedString = owned.joinToString(",")
+
+        val updated = when (slotName.trim().uppercase()) {
+            "CABEZA" -> current.copy(totalGold = newGold, ownedSkins = newOwnedString, equippedHead = normalizedId)
+            "PECHO" -> current.copy(totalGold = newGold, ownedSkins = newOwnedString, equippedChest = normalizedId)
+            "PIERNAS" -> current.copy(totalGold = newGold, ownedSkins = newOwnedString, equippedLegs = normalizedId)
+            else -> current.copy(totalGold = newGold, ownedSkins = newOwnedString)
+        }
+        dao.saveStats(updated)
+        return true
+    }
+
+    suspend fun equipSkin(skinId: String, slotName: String) {
+        val current = dao.getStats().firstOrNull() ?: GameStatsEntity()
+        val normalizedId = skinId.trim().uppercase()
+        val updated = when (slotName.trim().uppercase()) {
+            "CABEZA" -> current.copy(equippedHead = normalizedId)
+            "PECHO" -> current.copy(equippedChest = normalizedId)
+            "PIERNAS" -> current.copy(equippedLegs = normalizedId)
+            else -> current
+        }
+        dao.saveStats(updated)
+    }
 }
+

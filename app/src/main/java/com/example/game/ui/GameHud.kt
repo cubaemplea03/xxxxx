@@ -188,8 +188,8 @@ fun GameHud(
 
                     val kills = engine.enemiesDefeated
                     val playerLevel = engine.playerSurvivalLevel
-                    val killsThisLevel = kills % 15
-                    val ratio = killsThisLevel / 15f
+                    val killsThisLevel = kills % 10
+                    val ratio = killsThisLevel / 10f
 
                     // Level and kills counter
                     Row(
@@ -209,7 +209,7 @@ fun GameHud(
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            text = "($killsThisLevel/15 para Nivel ${playerLevel + 1})",
+                            text = "($killsThisLevel/10 para Nivel ${playerLevel + 1})",
                             color = Color(0xFFECEFF1),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium
@@ -224,7 +224,7 @@ fun GameHud(
 
                     Spacer(modifier = Modifier.height(3.dp))
 
-                    // Progress bar for 15 enemies
+                    // Progress bar for 10 enemies
                     Box(
                         modifier = Modifier
                             .width(160.dp)
@@ -243,6 +243,60 @@ fun GameHud(
                                     )
                                 )
                         )
+                    }
+                }
+            }
+
+            // DEDICATED BOSS HEALTH BAR (Appears dynamically when Boss spawns every 10 levels)
+            val boss = engine.getActiveBoss()
+            if (boss != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xF0180205))
+                        .border(1.5.dp, Color(0xFFFF1744), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "☠️ ${boss.bossName} • JEFE TIER ${boss.bossTier} ☠️",
+                                color = Color(0xFFFF5252),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.5.sp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "${boss.health.toInt()} / ${boss.maxHealth.toInt()} HP",
+                                color = Color(0xFFFFCDD2),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(220.dp)
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0x88000000))
+                                .border(0.5.dp, Color(0x66FF5252), RoundedCornerShape(4.dp))
+                        ) {
+                            val bossRatio = (boss.health / boss.maxHealth).coerceIn(0f, 1f)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(bossRatio)
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0xFFFF1744), Color(0xFFFF9100), Color(0xFFFFEA00))
+                                        )
+                                    )
+                            )
+                        }
                     }
                 }
             }
